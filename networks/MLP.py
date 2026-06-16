@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-class REINFORCE_NET(nn.Module):
+class MLP(nn.Module):
     def __init__(self, hidden_1, hidden_2, in_size=8, out_size=4):
         super().__init__()
         self.fc1 = nn.Linear(in_size, hidden_1)

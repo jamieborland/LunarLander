@@ -1,0 +1,13 @@
+hidden_1: 64
+hidden_2: 128
+lr: 0.0001
+gamma: 0.99
+update_frequency: 1000
+warm_up: 1000
+buffer_size: 10000
+batch_size: 64
+in_size: 8
+out_size: 4
+epsilon: 1.0
+decay_rate: 0.9954
+min_eps: 0.01
