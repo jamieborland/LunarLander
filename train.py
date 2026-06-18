@@ -5,25 +5,31 @@ from utils.plotting import plot
 import os
 import torch
 from utils.yaml_import import load_config
+from utils.seed import set_seed
 from agents.random import RandomAgent
 from agents.reinforce import REINFORCE
 from agents.dqn import DQN
+from agents.A2C import A2C
 
 
 if __name__ == '__main__':
 
+    set_seed(1)
+
     env = gym.make("LunarLander-v3")
+    obs, _ = env.reset(seed=1)
     episodes = 5000
     best_avg_reward = -float('inf')
     os.makedirs('checkpoints', exist_ok=True)
 
     parser = argparse.ArgumentParser(description='Train an agent on Lunar Lander')
-    parser.add_argument('--agent', type=str, choices=['Random', 'REINFORCE', 'DQN'], required=True)
+    parser.add_argument('--agent', type=str, choices=['Random', 'REINFORCE', 'DQN', 'A2C'], required=True)
     args = parser.parse_args()
 
     AGENTS = {
     'REINFORCE': REINFORCE,
     'DQN': DQN,
+    'A2C': A2C,
 }
 
     if args.agent == 'Random':

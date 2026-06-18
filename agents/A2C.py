@@ -6,6 +6,8 @@ import torch
 import numpy as np
 import torch.nn as nn
 import random
+from torch.nn.utils import clip_grad_norm_
+
 
 class A2C:
     def __init__(self, hidden_1, hidden_2, lr, update_frequency = 5, gamma=0.99, in_size=8, actor_out=4, value_out = 1):
@@ -15,8 +17,9 @@ class A2C:
         self.gamma = gamma
         self.criterion_value = nn.MSELoss()
         self.experience_list = []
-        self.step_count = 0
+        self.step_count = 1
         self.update_frequency = update_frequency
+
 
 
     def act(self, obs):
@@ -26,7 +29,7 @@ class A2C:
         action = dist.sample()
         log_prob = dist.log_prob(action)
 
-        return action, log_prob
+        return action.item(), log_prob
     
     def reset(self):
         self.experience_list = []
@@ -35,41 +38,54 @@ class A2C:
     def remember(self, obs, action, log_prob, reward, next_obs, done ):
         obs = torch.tensor(obs).float().to(self.device)
         next_obs = torch.tensor(next_obs).float().to(self.device)
-        reward = torch.tensor(reward).float().to(self.device)
+        reward = torch.tensor(reward).float().to(self.device).clamp(-1, 1)
         done = torch.tensor(done).float().to(self.device)
         self.experience_list.append((obs, log_prob, reward, next_obs, done))
 
     def on_episode_end(self):
-        pass
+        self.experience_list = []
 
     def update(self, done):
-        if self.step_count % self.update_frequency == 0:
+        if (self.step_count % self.update_frequency == 0 or done) and len(self.experience_list) > 0:
 
-            obs, log_prob, reward, next_obs, done = zip(*self.experience_list)
-            self.optimiser.zero_grad()
-            logits , value_obs = self.model(obs)
-            dist = Categorical(logits=logits)
-            log_probs = torch.log(dist.probs)
-            _, value_next_obs = self.model(next_obs)
-            target = reward + self.gamma*(value_next_obs) * (1-done)
-            loss_value = self.criterion_value(target, value_obs)
-            entropy = -(dist.probs * log_probs).sum(dim=-1)
-            advantage = target - value_obs
-            loss_actor = - log_prob * advantage
-            loss = 0.5*loss_value + 0.5 * loss_actor + 0.1 * entropy
-            loss.backward()
-            self.optimiser.step()
-            self.reset()
+                obs, log_prob, reward, next_obs, done = zip(*self.experience_list)
+                obs = torch.stack(obs)
+                next_obs = torch.stack(next_obs)
+                reward = torch.stack(reward)
+                done = torch.stack(done)
+                log_prob = torch.stack(log_prob)
 
+                self.optimiser.zero_grad()
+                logits , value_obs = self.model(obs)
+                dist = Categorical(logits=logits)
+                entropy = dist.entropy()
+                _, value_next_obs = self.model(next_obs)
+                value_obs = value_obs
+                value_next_obs = value_next_obs
+                target = (reward + self.gamma*(value_next_obs) * (1-done)).detach()
+                loss_value = self.criterion_value(target, value_obs)
+                advantage = target - value_obs.detach()
+                advantage = (advantage - advantage.mean()) / (advantage.std(correction=0) + 1e-8)
+                loss_actor = - log_prob * advantage
+                loss = (0.5*loss_value + loss_actor - 0.01 * entropy).mean()
+                #print(f"V(s): {value_obs.mean().item():.1f}  target: {target.mean().item():.1f}  adv_raw: {(target - value_obs.detach()).mean().item():.1f}  loss_v: {loss_value.item():.3f}  loss_pi: {loss_actor.mean().item():.3f}")
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=0.5)           
+                self.optimiser.step()
+                self.reset()
 
         self.step_count += 1
         
+    def save(self, path):
+        torch.save(self.model.state_dict(), path)
 
-
-
-
-    def save(self):
-        pass
-
-    def evaluate(self):
-        pass
+    def evaluate(self, obs, path):
+        self.model.load_state_dict(torch.load(path, weights_only=True))
+        obs = torch.from_numpy(obs).float().to(self.device)
+        self.model.eval()
+        with torch.no_grad():
+            logits, _ = self.model(obs)
+            action = logits.argmax().item()
+            return action
+        
+        

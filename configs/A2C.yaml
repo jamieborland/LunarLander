@@ -1,0 +1,8 @@
+hidden_1: 64
+hidden_2: 128
+lr: 0.001
+gamma: 0.99
+in_size: 8
+actor_out: 4
+value_out :  1
+update_frequency: 100
