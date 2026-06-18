@@ -5,4 +5,5 @@ gamma: 0.99
 in_size: 8
 actor_out: 4
 value_out :  1
-update_frequency: 100
+update_frequency: 32
+n_step: True

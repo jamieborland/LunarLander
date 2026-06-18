@@ -7,10 +7,10 @@ import numpy as np
 import torch.nn as nn
 import random
 from torch.nn.utils import clip_grad_norm_
-
+import os
 
 class A2C:
-    def __init__(self, hidden_1, hidden_2, lr, update_frequency = 5, gamma=0.99, in_size=8, actor_out=4, value_out = 1):
+    def __init__(self, hidden_1, hidden_2, lr, n_step=False, update_frequency = 5, gamma=0.99, in_size=8, actor_out=4, value_out = 1):
         self.device = get_device()
         self.model = ActorCritic(hidden_1, hidden_2, in_size, actor_out, value_out).to(self.device)
         self.optimiser = optim.AdamW(self.model.parameters(), lr=lr)
@@ -19,6 +19,7 @@ class A2C:
         self.experience_list = []
         self.step_count = 1
         self.update_frequency = update_frequency
+        self.n_step = n_step
 
 
 
@@ -54,15 +55,24 @@ class A2C:
                 reward = torch.stack(reward)
                 done = torch.stack(done)
                 log_prob = torch.stack(log_prob)
-
                 self.optimiser.zero_grad()
                 logits , value_obs = self.model(obs)
                 dist = Categorical(logits=logits)
                 entropy = dist.entropy()
-                _, value_next_obs = self.model(next_obs)
-                value_obs = value_obs
-                value_next_obs = value_next_obs
-                target = (reward + self.gamma*(value_next_obs) * (1-done)).detach()
+
+                if self.n_step:
+                    target = torch.zeros(len(self.experience_list)).to(self.device)
+                    _, value_last_obs = self.model(next_obs[-1])
+                    V_next = value_last_obs.detach()
+                    for i in range(len(self.experience_list) - 1, -1, -1):
+                        y = reward[i]+ self.gamma*V_next * (1-done[i])
+                        V_next = y
+                        target[i] = y
+
+                else:
+                    _, value_next_obs = self.model(next_obs)
+                    target = (reward + self.gamma*(value_next_obs) * (1-done)).detach()
+
                 loss_value = self.criterion_value(target, value_obs)
                 advantage = target - value_obs.detach()
                 advantage = (advantage - advantage.mean()) / (advantage.std(correction=0) + 1e-8)
@@ -88,4 +98,8 @@ class A2C:
             action = logits.argmax().item()
             return action
         
-        
+    @property
+    def name(self):
+        return "A2C_nstep" if self.n_step else "A2C_td1"
+            
+            
