@@ -74,4 +74,8 @@ class REINFORCE:
     def on_episode_end(self):
         pass
 
+    @property
+    def name(self):
+        return "REINFORCE"  
+
 

@@ -85,6 +85,10 @@ class DQN:
             logits = self.onlineNet(x)
             action = torch.argmax(logits).item()
         return action
+    
+    @property
+    def name(self):
+        return "DQN"  
         
 
     

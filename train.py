@@ -40,7 +40,7 @@ if __name__ == '__main__':
         config = load_config(args.agent)
         agent = agent_class(**config)
 
-    logger = Logger(args.agent)
+    logger = Logger(agent.name)
 
     for episode in range(episodes):
         episode_rewards = 0
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
         if episode >=100 and avg > best_avg_reward:
             best_avg_reward = avg
-            agent.save(f"checkpoints/{args.agent}.pth")
+            agent.save(f"checkpoints/{agent.name}.pth")
             print("Saving model with average reward:", best_avg_reward )
         
         if episode >= 100 and avg > 200:
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     logger.average_reward()
     print(f'Average reward over last 100 episodes: {logger.average_reward()}')
     logger.save()
-    plot(args.agent)
+    plot(agent.name)
 
 
 
