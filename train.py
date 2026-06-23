@@ -10,6 +10,7 @@ from agents.random import RandomAgent
 from agents.reinforce import REINFORCE
 from agents.dqn import DQN
 from agents.A2C import A2C
+from agents.ppo import PPO
 
 
 if __name__ == '__main__':
@@ -23,13 +24,14 @@ if __name__ == '__main__':
     os.makedirs('checkpoints', exist_ok=True)
 
     parser = argparse.ArgumentParser(description='Train an agent on Lunar Lander')
-    parser.add_argument('--agent', type=str, choices=['Random', 'REINFORCE', 'DQN', 'A2C'], required=True)
+    parser.add_argument('--agent', type=str, choices=['Random', 'REINFORCE', 'DQN', 'A2C', 'PPO'], required=True)
     args = parser.parse_args()
 
     AGENTS = {
     'REINFORCE': REINFORCE,
     'DQN': DQN,
     'A2C': A2C,
+    'PPO': PPO,
 }
 
     if args.agent == 'Random':

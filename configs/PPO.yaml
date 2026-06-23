@@ -1,0 +1,11 @@
+hidden_1: 64
+hidden_2: 128
+lr: 0.001
+l: 0.95
+epsilon: 0.2
+gamma: 0.99
+in_size: 8
+actor_out: 4
+value_out :  1
+update_frequency: 2048
+epochs: 10
